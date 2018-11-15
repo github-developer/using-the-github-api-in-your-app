@@ -73,8 +73,7 @@ class GHAapp < Sinatra::Application
       end
     end
 
-    'ok'  # we have to return _something_ ;)
-
+    'ok' # You have to return _something_. ;)
   end
 
 
