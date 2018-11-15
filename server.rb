@@ -1,7 +1,6 @@
 require 'sinatra'
 require 'octokit'
 require 'dotenv/load' # Manages environment variables
-require 'git'
 require 'json'
 require 'openssl'     # Verifies the webhook signature
 require 'jwt'         # Authenticates a GitHub App
@@ -63,6 +62,7 @@ class GHAapp < Sinatra::Application
     # ADD YOUR CODE HERE  #
     # # # # # # # # # # # #
 
+    200 # success status
   end
 
 
@@ -142,5 +142,11 @@ class GHAapp < Sinatra::Application
     end
 
   end
+
+  # Finally some logic to let us run this server directly from the commandline, or with Rack
+  # Don't worry too much about this code. But, for the curious:
+  # $0 is the executed file
+  # __FILE__ is the current file
+  # If they are the same—that is, we are running this file directly, call the Sinatra run method
   run! if __FILE__ == $0
 end
