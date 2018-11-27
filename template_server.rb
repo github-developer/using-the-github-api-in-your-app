@@ -49,7 +49,7 @@ class GHAapp < Sinatra::Application
   # Before each request to the `/event_handler` route
   before '/event_handler' do
     get_payload_request(request)
-    verify_webhook_signature!
+    verify_webhook_signature
     authenticate_app
     # Authenticate the app installation in order to run API operations
     authenticate_installation(@payload)

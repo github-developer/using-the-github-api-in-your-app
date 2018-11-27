@@ -16,7 +16,7 @@ class GHAapp < Sinatra::Application
   # environment variable in PEM format.
   PRIVATE_KEY = OpenSSL::PKey::RSA.new(ENV['GITHUB_PRIVATE_KEY'].gsub('\n', "\n"))
 
-  # Your registered app must set have a secret set. The secret is used to verify
+  # Your registered app must have a secret set. The secret is used to verify
   # that webhooks are sent by GitHub.
   WEBHOOK_SECRET = ENV['GITHUB_WEBHOOK_SECRET']
 
@@ -32,7 +32,7 @@ class GHAapp < Sinatra::Application
   # Executed before each request to the `/event_handler` route
   before '/event_handler' do
     get_payload_request(request)
-    verify_webhook_signature!
+    verify_webhook_signature
     authenticate_app
     # Authenticate the app installation in order to run API operations
     authenticate_installation(@payload)
