@@ -10,30 +10,13 @@ require 'logger'      # Logs debug statements
 set :port, 3000
 set :bind, '0.0.0.0'
 
-
-# This is template code to create a GitHub App server.
-# You can read more about GitHub Apps here: # https://developer.github.com/apps/
-#
-# On its own, this app does absolutely nothing, except that it can be installed.
-# It's up to you to add functionality!
-# You can check out one example in advanced_server.rb.
-#
-# This code is a Sinatra app, for two reasons:
-#   1. Because the app will require a landing page for installation.
-#   2. To easily handle webhook events.
-#
-# Of course, not all apps need to receive and process events!
-# Feel free to rip out the event handling code if you don't need it.
-#
-# Have fun!
-#
-
 class GHAapp < Sinatra::Application
 
-  # Expects that the private key in PEM format. Converts the newlines
+  # Converts the newlines. Expects that the private key has been set as an
+  # environment variable in PEM format.
   PRIVATE_KEY = OpenSSL::PKey::RSA.new(ENV['GITHUB_PRIVATE_KEY'].gsub('\n', "\n"))
 
-  # Your registered app must have a secret set. The secret is used to verify
+  # Your registered app must set have a secret set. The secret is used to verify
   # that webhooks are sent by GitHub.
   WEBHOOK_SECRET = ENV['GITHUB_WEBHOOK_SECRET']
 
@@ -46,10 +29,10 @@ class GHAapp < Sinatra::Application
   end
 
 
-  # Before each request to the `/event_handler` route
+  # Executed before each request to the `/event_handler` route
   before '/event_handler' do
     get_payload_request(request)
-    verify_webhook_signature
+    verify_webhook_signature!
     authenticate_app
     # Authenticate the app installation in order to run API operations
     authenticate_installation(@payload)
@@ -149,10 +132,11 @@ class GHAapp < Sinatra::Application
 
   end
 
-  # Finally some logic to let us run this server directly from the commandline, or with Rack
-  # Don't worry too much about this code. But, for the curious:
+  # Finally some logic to let us run this server directly from the command line,
+  # or with Rack. Don't worry too much about this code. But, for the curious:
   # $0 is the executed file
   # __FILE__ is the current file
-  # If they are the same—that is, we are running this file directly, call the Sinatra run method
+  # If they are the same—that is, we are running this file directly, call the
+  # Sinatra run method
   run! if __FILE__ == $0
 end
