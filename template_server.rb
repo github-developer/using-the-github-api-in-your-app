@@ -137,7 +137,7 @@ class GHAapp < Sinatra::Application
 
       # The X-GITHUB-EVENT header provides the name of the event.
       # The action value indicates the which action triggered the event.
-      logger.debug "---- recevied event #{request.env['HTTP_X_GITHUB_EVENT']}"
+      logger.debug "---- received event #{request.env['HTTP_X_GITHUB_EVENT']}"
       logger.debug "----    action #{@payload['action']}" unless @payload['action'].nil?
     end
 
