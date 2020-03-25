@@ -16,7 +16,7 @@ set :bind, '0.0.0.0'
 #
 # On its own, this app does absolutely nothing, except that it can be installed.
 # It's up to you to add functionality!
-# You can check out one example in advanced_server.rb.
+# You can check out one example in server.rb.
 #
 # This code is a Sinatra app, for two reasons:
 #   1. Because the app will require a landing page for installation.
