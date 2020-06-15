@@ -8,7 +8,7 @@ To learn how to set up a template GitHub App, follow the "[Setting up your devel
 
 ## Install
 
-To run the code, make sure you have [Bundler](http://gembundler.com/) installed; then enter `bundle install` on the command line.
+To run the code, make sure you have [Bundler](https://bundler.io/) installed; then enter `bundle install` on the command line.
 
 ## Set environment variables
 
