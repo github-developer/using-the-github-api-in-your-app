@@ -12,7 +12,7 @@ GEM
     octokit (4.13.0)
       sawyer (~> 0.8.0, >= 0.5.3)
     public_suffix (3.0.3)
-    rack (2.0.8)
+    rack (2.2.3)
     rack-protection (2.0.4)
       rack
     sawyer (0.8.1)
