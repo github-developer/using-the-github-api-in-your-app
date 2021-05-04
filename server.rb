@@ -39,7 +39,12 @@ class GHAapp < Sinatra::Application
   end
 
 
+  get '/' do
+    "<form><input type=submit /></form>"
+  end
+  
   post '/event_handler' do
+    puts request.env['HTTP_X_GITHUB_EVENT']
 
     case request.env['HTTP_X_GITHUB_EVENT']
     when 'issues'
