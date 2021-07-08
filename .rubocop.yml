@@ -11,16 +11,16 @@ Metrics/ClassLength:
   Enabled: false
 
 Metrics/CyclomaticComplexity:
-  Severity: warning
+  Enabled: false
 
 Metrics/MethodLength:
   Enabled: false
 
 Metrics/PerceivedComplexity:
-  Severity: warning
+  Enabled: false
 
 Naming/MemoizedInstanceVariableName:
-  Severity: warning
+  Enabled: false
 
 Style/FrozenStringLiteralComment:
   Enabled: false
