@@ -10,8 +10,8 @@ require 'logger'      # Logs debug statements
 set :port, 3000
 set :bind, '0.0.0.0'
 
+# Main class representing GitHub App
 class GHAapp < Sinatra::Application
-
   # Converts the newlines. Expects that the private key has been set as an
   # environment variable in PEM format.
   PRIVATE_KEY = OpenSSL::PKey::RSA.new(ENV['GITHUB_PRIVATE_KEY'].gsub('\n', "\n"))
@@ -28,7 +28,6 @@ class GHAapp < Sinatra::Application
     set :logging, Logger::DEBUG
   end
 
-
   # Executed before each request to the `/event_handler` route
   before '/event_handler' do
     get_payload_request(request)
@@ -38,88 +37,82 @@ class GHAapp < Sinatra::Application
     authenticate_installation(@payload)
   end
 
-
   post '/event_handler' do
-
     case request.env['HTTP_X_GITHUB_EVENT']
     when 'repository'
-      if @payload['action'] === 'created'
-        handle_repository_created_event(@payload)
-      end
+      handle_repository_created_event(@payload) if @payload['action'] == 'created'
     end
 
     200 # success status
   end
 
-
   helpers do
-
     # When a repository is created, create branch protection rule and document it
     def handle_repository_created_event(payload)
       repo = payload['repository']['full_name']
-      default_branch = 'main' # normally would be payload['repository']['default_branch'] but webhook bug says default is 'master' when it is 'main'
+      default_branch = 'main' # payload['repository']['default_branch'] but GitHub webhook event bug
       branch_protection = @installation_client.branch_protection(repo, default_branch, {
-        :accept => Octokit::Preview::PREVIEW_TYPES[:branch_protection],
+        accept => Octokit::Preview::PREVIEW_TYPES[branch_protection]
       })
 
-      if branch_protection.nil?
-        @installation_client.protect_branch(repo, default_branch, {
-          :accept => Octokit::Preview::PREVIEW_TYPES[:branch_protection],
-          :enforce_admins => true,
-          :required_pull_request_reviews => {
-            :dismiss_stale_reviews => true,
-            :require_code_owner_reviews => true,
-            :required_approving_review_count => 2,
-          },
-        })
+      return unless branch_protection.nil?
 
-        branch_protection = @installation_client.branch_protection(repo, default_branch, {
-          :accept => Octokit::Preview::PREVIEW_TYPES[:branch_protection],
-        })
+      @installation_client.protect_branch(repo, default_branch, {
+        accept => Octokit::Preview::PREVIEW_TYPES[branch_protection],
+        enforce_admins => true,
+        required_pull_request_reviews => {
+          dismiss_stale_reviews => true,
+          require_code_owner_reviews => true,
+          required_approving_review_count => 2
+        }
+      })
 
-        body = <<~EOB
-          Hey @#{payload['sender']['login']},
-          
-          Congrats on starting the next big thing! :clap: :tada: :trophy:  In order to help, a branch protection rule with the following settings were created for the **#{default_branch}** branch.
+      branch_protection = @installation_client.branch_protection(repo, default_branch, {
+        accept => Octokit::Preview::PREVIEW_TYPES[branch_protection]
+      })
 
-          ---
+      body = <<~END_OF_BODY
+        Hey @#{payload['sender']['login']},
 
-          :#{branch_protection[:required_pull_request_reviews] ? 'white_check_mark' : 'black_square_button'}: **Require pull request reviews before merging**
-          _When enabled, all commits must be made to a non-protected branch and submitted via a pull request with the required number of approving reviews and no changes requested before it can be merged into a branch that matches this rule._
+        Congrats on starting the next big thing! :clap: :tada: :trophy:  In order to help, a branch protection rule with the following settings were created for the **#{default_branch}** branch.
 
-          - **Required approving reviews**: #{branch_protection[:required_pull_request_reviews] ? branch_protection[:required_pull_request_reviews][:required_approving_review_count] : ''}
+        ---
 
-          - :#{branch_protection[:required_pull_request_reviews] && branch_protection[:required_pull_request_reviews][:dismiss_stale_reviews] ? 'white_check_mark' : 'black_square_button'}: **Dismiss stale pull request approvals when new commits are pushed**
-            _New reviewable commits pushed to a matching branch will dismiss pull request review approvals._
+        :#{branch_protection[required_pull_request_reviews] ? 'white_check_mark' : 'black_square_button'}: **Require pull request reviews before merging**
+        _When enabled, all commits must be made to a non-protected branch and submitted via a pull request with the required number of approving reviews and no changes requested before it can be merged into a branch that matches this rule._
 
-          - :#{branch_protection[:required_pull_request_reviews] && branch_protection[:required_pull_request_reviews][:require_code_owner_reviews] ? 'white_check_mark' : 'black_square_button'}: **Require review from Code Owners**
-            _Require an approved review in pull requests including files with a designated code owner._
+        - **Required approving reviews**: #{branch_protection[required_pull_request_reviews] ? branch_protection[required_pull_request_reviews][required_approving_review_count] : ''}
 
-          :#{branch_protection[:required_status_checks] ? 'white_check_mark' : 'black_square_button'}: **Require status checks to pass before merging**
-          _Choose which status checks must pass before branches can be merged into a branch that matches this rule. When enabled, commits must first be pushed to another branch, then merged or pushed directly to a branch that matches this rule after status checks have passed._
+        - :#{branch_protection[required_pull_request_reviews] && branch_protection[required_pull_request_reviews][dismiss_stale_reviews] ? 'white_check_mark' : 'black_square_button'}: **Dismiss stale pull request approvals when new commits are pushed**
+          _New reviewable commits pushed to a matching branch will dismiss pull request review approvals._
 
-          - :#{branch_protection[:required_status_checks] && branch_protection[:required_status_checks][:strict] ? 'white_check_mark' : 'black_square_button'}: **Require branches to be up to date before merging**
-            _This ensures pull requests targeting a matching branch have been tested with the latest code. This setting will not take effect unless at least one status check is enabled (see below)._
+        - :#{branch_protection[required_pull_request_reviews] && branch_protection[required_pull_request_reviews][require_code_owner_reviews] ? 'white_check_mark' : 'black_square_button'}: **Require review from Code Owners**
+          _Require an approved review in pull requests including files with a designated code owner._
 
-          :#{branch_protection[:required_conversation_resolution][:enabled] ? 'white_check_mark' : 'black_square_button'}: **Require conversation resolution before merging**
-          _When enabled, all conversations on code must be resolved before a pull request can be merged into a branch that matches this rule._
+        :#{branch_protection[required_status_checks] ? 'white_check_mark' : 'black_square_button'}: **Require status checks to pass before merging**
+        _Choose which status checks must pass before branches can be merged into a branch that matches this rule. When enabled, commits must first be pushed to another branch, then merged or pushed directly to a branch that matches this rule after status checks have passed._
 
-          :#{branch_protection[:required_linear_history][:enabled] ? 'white_check_mark' : 'black_square_button'}: **Require linear history**
-          _Prevent merge commits from being pushed to matching branches._
+        - :#{branch_protection[required_status_checks] && branch_protection[required_status_checks][strict] ? 'white_check_mark' : 'black_square_button'}: **Require branches to be up to date before merging**
+          _This ensures pull requests targeting a matching branch have been tested with the latest code. This setting will not take effect unless at least one status check is enabled (see below)._
 
-          :#{branch_protection[:enforce_admins][:enabled] ? 'white_check_mark' : 'black_square_button'}: **Include administrators**
-          _Enforce all configured restrictions above for administrators._
+        :#{branch_protection[required_conversation_resolution][enabled] ? 'white_check_mark' : 'black_square_button'}: **Require conversation resolution before merging**
+        _When enabled, all conversations on code must be resolved before a pull request can be merged into a branch that matches this rule._
 
-          :#{branch_protection[:allow_force_pushes][:enabled] ? 'white_check_mark' : 'black_square_button'}: **Allow force pushes**
-          _Permit force pushes for all users with push access._
+        :#{branch_protection[required_linear_history][enabled] ? 'white_check_mark' : 'black_square_button'}: **Require linear history**
+        _Prevent merge commits from being pushed to matching branches._
 
-          :#{branch_protection[:allow_deletions][:enabled] ? 'white_check_mark' : 'black_square_button'}: **Allow deletions**
-          _Allow users with push access to delete matching branches._
-        EOB
+        :#{branch_protection[enforce_admins][enabled] ? 'white_check_mark' : 'black_square_button'}: **Include administrators**
+        _Enforce all configured restrictions above for administrators._
 
-        issue = @installation_client.create_issue(repo, "Setup branch protection for #{default_branch}", body)
-        @installation_client.close_issue(repo, issue.number)
-      end
+        :#{branch_protection[allow_force_pushes][enabled] ? 'white_check_mark' : 'black_square_button'}: **Allow force pushes**
+        _Permit force pushes for all users with push access._
+
+        :#{branch_protection[allow_deletions][enabled] ? 'white_check_mark' : 'black_square_button'}: **Allow deletions**
+        _Allow users with push access to delete matching branches._
+      END_OF_BODY
+
+      issue = @installation_client.create_issue(repo, "Setup branch protection for #{default_branch}", body)
+      @installation_client.close_issue(repo, issue.number)
     end
 
     # Saves the raw payload and converts the payload to JSON format
@@ -132,7 +125,7 @@ class GHAapp < Sinatra::Application
       begin
         @payload = JSON.parse @payload_raw
       rescue => e
-        fail  "Invalid JSON (#{e}): #{@payload_raw}"
+        raise "Invalid JSON (#{e}): #{@payload_raw}"
       end
     end
 
@@ -164,9 +157,12 @@ class GHAapp < Sinatra::Application
     # Instantiate an Octokit client, authenticated as an installation of a
     # GitHub App, to run API operations.
     def authenticate_installation(payload)
-      logger.warn "Delivery #{request.env['HTTP_X_GITHUB_DELIVERY']} missing installation payload" unless payload.include? 'installation'
+      unless payload.include? 'installation'
+        logger.warn "Delivery #{request.env['HTTP_X_GITHUB_DELIVERY']} missing installation payload"
+      end
+
       @installation_id = payload['installation']['id']
-      @installation_token = @app_client.create_app_installation_access_token(@installation_id)[:token]
+      @installation_token = @app_client.create_app_installation_access_token(@installation_id)[token]
       @installation_client = Octokit::Client.new(bearer_token: @installation_token)
     end
 
@@ -192,7 +188,6 @@ class GHAapp < Sinatra::Application
       logger.debug "---- received event #{request.env['HTTP_X_GITHUB_EVENT']}"
       logger.debug "----    action #{@payload['action']}" unless @payload['action'].nil?
     end
-
   end
 
   # Finally some logic to let us run this server directly from the command line,
@@ -201,5 +196,5 @@ class GHAapp < Sinatra::Application
   # __FILE__ is the current file
   # If they are the same—that is, we are running this file directly, call the
   # Sinatra run method
-  run! if __FILE__ == $0
+  run! if __FILE__ == $PROGRAM_NAME
 end

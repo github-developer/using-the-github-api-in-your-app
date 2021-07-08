@@ -1,10 +1,10 @@
 source 'http://rubygems.org'
 
-gem 'sinatra', '~> 2.0'
+gem 'dotenv'
 gem 'jwt', '~> 2.1'
 gem 'octokit', '~> 4.21'
-gem 'dotenv'
+gem 'sinatra', '~> 2.0'
 
 group :test, :development do
-    gem 'rubocop', require: false
+  gem 'rubocop', require: false
 end
