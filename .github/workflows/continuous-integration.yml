@@ -1,0 +1,49 @@
+name: continuous-integration
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+jobs:
+
+  # Source: https://github.com/discourse/discourse/blob/master/.github/workflows/linting.yml
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+        ruby:
+          - 2.5
+          - 2.6
+          - 2.7
+          - '3.0'  # Due to https://github.com/actions/runner/issues/849, we have to use quotes for '3.0'
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+
+      - name: Cache gems
+        uses: actions/cache@v1
+        with:
+          path: vendor/bundle
+          key: ${{ runner.os }}-rubocop-${{ hashFiles('**/Gemfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-rubocop-
+
+      - name: Install gems
+        run: |
+          bundle config --local path vendor/bundle
+          bundle config --local deployment true
+          bundle config --local without development
+          bundle install --jobs 4
+          bundle clean
+
+      - name: Run RuboCop
+        run: bundle exec rubocop --parallel
