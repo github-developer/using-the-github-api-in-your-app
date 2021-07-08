@@ -42,9 +42,9 @@ class GHAapp < Sinatra::Application
   post '/event_handler' do
 
     case request.env['HTTP_X_GITHUB_EVENT']
-    when 'issues'
-      if @payload['action'] === 'opened'
-        handle_issue_opened_event(@payload)
+    when 'repository'
+      if @payload['action'] === 'created'
+        handle_repository_created_event(@payload)
       end
     end
 
@@ -54,11 +54,72 @@ class GHAapp < Sinatra::Application
 
   helpers do
 
-    # When an issue is opened, add a label
-    def handle_issue_opened_event(payload)
+    # When a repository is created, create branch protection rule and document it
+    def handle_repository_created_event(payload)
       repo = payload['repository']['full_name']
-      issue_number = payload['issue']['number']
-      @installation_client.add_labels_to_an_issue(repo, issue_number, ['needs-response'])
+      default_branch = 'main' # normally would be payload['repository']['default_branch'] but webhook bug says default is 'master' when it is 'main'
+      branch_protection = @installation_client.branch_protection(repo, default_branch, {
+        :accept => Octokit::Preview::PREVIEW_TYPES[:branch_protection],
+      })
+
+      if branch_protection.nil?
+        @installation_client.protect_branch(repo, default_branch, {
+          :accept => Octokit::Preview::PREVIEW_TYPES[:branch_protection],
+          :enforce_admins => true,
+          :required_pull_request_reviews => {
+            :dismiss_stale_reviews => true,
+            :require_code_owner_reviews => true,
+            :required_approving_review_count => 2,
+          },
+        })
+
+        branch_protection = @installation_client.branch_protection(repo, default_branch, {
+          :accept => Octokit::Preview::PREVIEW_TYPES[:branch_protection],
+        })
+
+        body = <<~EOB
+          Hey @#{payload['sender']['login']},
+          
+          Congrats on starting the next big thing! :clap: :tada: :trophy:  In order to help, a branch protection rule with the following settings were created for the **#{default_branch}** branch.
+
+          ---
+
+          :#{branch_protection[:required_pull_request_reviews] ? 'white_check_mark' : 'black_square_button'}: **Require pull request reviews before merging**
+          _When enabled, all commits must be made to a non-protected branch and submitted via a pull request with the required number of approving reviews and no changes requested before it can be merged into a branch that matches this rule._
+
+          - **Required approving reviews**: #{branch_protection[:required_pull_request_reviews] ? branch_protection[:required_pull_request_reviews][:required_approving_review_count] : ''}
+
+          - :#{branch_protection[:required_pull_request_reviews] && branch_protection[:required_pull_request_reviews][:dismiss_stale_reviews] ? 'white_check_mark' : 'black_square_button'}: **Dismiss stale pull request approvals when new commits are pushed**
+            _New reviewable commits pushed to a matching branch will dismiss pull request review approvals._
+
+          - :#{branch_protection[:required_pull_request_reviews] && branch_protection[:required_pull_request_reviews][:require_code_owner_reviews] ? 'white_check_mark' : 'black_square_button'}: **Require review from Code Owners**
+            _Require an approved review in pull requests including files with a designated code owner._
+
+          :#{branch_protection[:required_status_checks] ? 'white_check_mark' : 'black_square_button'}: **Require status checks to pass before merging**
+          _Choose which status checks must pass before branches can be merged into a branch that matches this rule. When enabled, commits must first be pushed to another branch, then merged or pushed directly to a branch that matches this rule after status checks have passed._
+
+          - :#{branch_protection[:required_status_checks] && branch_protection[:required_status_checks][:strict] ? 'white_check_mark' : 'black_square_button'}: **Require branches to be up to date before merging**
+            _This ensures pull requests targeting a matching branch have been tested with the latest code. This setting will not take effect unless at least one status check is enabled (see below)._
+
+          :#{branch_protection[:required_conversation_resolution][:enabled] ? 'white_check_mark' : 'black_square_button'}: **Require conversation resolution before merging**
+          _When enabled, all conversations on code must be resolved before a pull request can be merged into a branch that matches this rule._
+
+          :#{branch_protection[:required_linear_history][:enabled] ? 'white_check_mark' : 'black_square_button'}: **Require linear history**
+          _Prevent merge commits from being pushed to matching branches._
+
+          :#{branch_protection[:enforce_admins][:enabled] ? 'white_check_mark' : 'black_square_button'}: **Include administrators**
+          _Enforce all configured restrictions above for administrators._
+
+          :#{branch_protection[:allow_force_pushes][:enabled] ? 'white_check_mark' : 'black_square_button'}: **Allow force pushes**
+          _Permit force pushes for all users with push access._
+
+          :#{branch_protection[:allow_deletions][:enabled] ? 'white_check_mark' : 'black_square_button'}: **Allow deletions**
+          _Allow users with push access to delete matching branches._
+        EOB
+
+        issue = @installation_client.create_issue(repo, "Setup branch protection for #{default_branch}", body)
+        @installation_client.close_issue(repo, issue.number)
+      end
     end
 
     # Saves the raw payload and converts the payload to JSON format
@@ -91,6 +152,7 @@ class GHAapp < Sinatra::Application
           # Your GitHub App's identifier number
           iss: APP_IDENTIFIER
       }
+      logger.debug "JWT payload: #{payload}"
 
       # Cryptographically sign the JWT.
       jwt = JWT.encode(payload, PRIVATE_KEY, 'RS256')
@@ -102,6 +164,7 @@ class GHAapp < Sinatra::Application
     # Instantiate an Octokit client, authenticated as an installation of a
     # GitHub App, to run API operations.
     def authenticate_installation(payload)
+      logger.warn "Delivery #{request.env['HTTP_X_GITHUB_DELIVERY']} missing installation payload" unless payload.include? 'installation'
       @installation_id = payload['installation']['id']
       @installation_token = @app_client.create_app_installation_access_token(@installation_id)[:token]
       @installation_client = Octokit::Client.new(bearer_token: @installation_token)
