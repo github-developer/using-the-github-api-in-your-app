@@ -10,8 +10,17 @@ Metrics/BlockLength:
 Metrics/ClassLength:
   Enabled: false
 
+Metrics/CyclomaticComplexity:
+  Severity: warning
+
 Metrics/MethodLength:
   Enabled: false
+
+Metrics/PerceivedComplexity:
+  Severity: warning
+
+Naming/MemoizedInstanceVariableName:
+  Severity: warning
 
 Style/FrozenStringLiteralComment:
   Enabled: false

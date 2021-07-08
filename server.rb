@@ -194,7 +194,7 @@ class GHAapp < Sinatra::Application
   # or with Rack. Don't worry too much about this code. But, for the curious:
   # $0 is the executed file
   # __FILE__ is the current file
-  # If they are the same—that is, we are running this file directly, call the
+  # If they are the same-that is, we are running this file directly, call the
   # Sinatra run method
   run! if __FILE__ == $PROGRAM_NAME
 end
