@@ -16,10 +16,10 @@ jobs:
         os:
           - ubuntu-latest
         ruby:
-          - 2.5
-          - 2.6
+          # - 2.5
+          # - 2.6
           - 2.7
-          - '3.0'  # Due to https://github.com/actions/runner/issues/849, we have to use quotes for '3.0'
+          # - '3.0'  # Due to https://github.com/actions/runner/issues/849, we have to use quotes for '3.0'
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2

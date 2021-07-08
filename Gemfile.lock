@@ -3,6 +3,7 @@ GEM
   specs:
     addressable (2.8.0)
       public_suffix (>= 2.0.2, < 5.0)
+    ast (2.4.2)
     dotenv (2.5.0)
     faraday (1.5.0)
       faraday-em_http (~> 1.0)
@@ -27,10 +28,28 @@ GEM
     octokit (4.21.0)
       faraday (>= 0.9)
       sawyer (~> 0.8.0, >= 0.5.3)
+    parallel (1.20.1)
+    parser (3.0.2.0)
+      ast (~> 2.4.1)
     public_suffix (4.0.6)
     rack (2.0.8)
     rack-protection (2.0.4)
       rack
+    rainbow (3.0.0)
+    regexp_parser (2.1.1)
+    rexml (3.2.5)
+    rubocop (1.18.3)
+      parallel (~> 1.10)
+      parser (>= 3.0.0.0)
+      rainbow (>= 2.2.2, < 4.0)
+      regexp_parser (>= 1.8, < 3.0)
+      rexml
+      rubocop-ast (>= 1.7.0, < 2.0)
+      ruby-progressbar (~> 1.7)
+      unicode-display_width (>= 1.4.0, < 3.0)
+    rubocop-ast (1.7.0)
+      parser (>= 3.0.1.1)
+    ruby-progressbar (1.11.0)
     ruby2_keywords (0.0.4)
     sawyer (0.8.2)
       addressable (>= 2.3.5)
@@ -41,6 +60,7 @@ GEM
       rack-protection (= 2.0.4)
       tilt (~> 2.0)
     tilt (2.0.8)
+    unicode-display_width (2.0.0)
 
 PLATFORMS
   ruby
@@ -49,6 +69,7 @@ DEPENDENCIES
   dotenv
   jwt (~> 2.1)
   octokit (~> 4.21)
+  rubocop
   sinatra (~> 2.0)
 
 BUNDLED WITH
