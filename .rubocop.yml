@@ -25,5 +25,8 @@ Naming/MemoizedInstanceVariableName:
 Style/FrozenStringLiteralComment:
   Enabled: false
 
+Style/HashSyntax:
+  Enabled: false
+
 Style/RescueStandardError:
   Enabled: false

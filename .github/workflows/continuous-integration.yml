@@ -6,28 +6,22 @@ on:
   pull_request:
     branches:
       - main
-jobs:
+env:
+  IMAGE_NAME: branch-protection-enforcer-app
 
+jobs:
   # Source: https://github.com/discourse/discourse/blob/master/.github/workflows/linting.yml
   test:
     strategy:
       fail-fast: false
-      matrix:
-        os:
-          - ubuntu-latest
-        ruby:
-          # - 2.5
-          # - 2.6
-          - 2.7
-          # - '3.0'  # Due to https://github.com/actions/runner/issues/849, we have to use quotes for '3.0'
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: ${{ matrix.ruby }}
+          ruby-version: 2.7
 
       - name: Cache gems
         uses: actions/cache@v1
@@ -45,5 +39,47 @@ jobs:
           bundle install --jobs 4
           bundle clean
 
-      - name: Run RuboCop
-        run: bundle exec rubocop --parallel
+      - name: Lint
+        run: rake lint
+
+  # Source: https://docs.github.com/en/packages/managing-github-packages-using-github-actions-workflows/publishing-and-installing-a-package-with-github-actions
+  package:
+    strategy:
+      fail-fast: false
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Build image
+        run: docker build . --file Dockerfile --tag $IMAGE_NAME --label "GITHUB_RUN_ID=${GITHUB_RUN_ID}"
+
+      - name: Log in to registry
+        if: ${{ github.ref == 'refs/heads/main' }}
+        run: |
+          # This is where you will update the PAT to GITHUB_TOKEN
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Push image
+        if: ${{ github.ref == 'refs/heads/main' }}
+        run: |
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
+
+          # Change all uppercase to lowercase
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+
+          # Use Docker `latest` tag convention
+          [ "$VERSION" == "main" ] && VERSION=latest
+
+          echo IMAGE_ID=$IMAGE_ID
+          echo VERSION=$VERSION
+          docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
+          docker push $IMAGE_ID:$VERSION

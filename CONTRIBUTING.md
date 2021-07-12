@@ -131,3 +131,8 @@ Local development for the Branch Protection Enforcer App follows most of the ["S
    ![Demo new repository branch protection rule](docs/demo_new_repo_branch_protection.png)
 
 [Back to the top](#contribute-to-the-branch-protection-enforcer-app)
+
+## Resources
+
+* [GitHub Actions Documentation](https://docs.github.com/en/actions)
+  * [Building and testing Ruby](https://docs.github.com/en/actions/guides/building-and-testing-ruby)
